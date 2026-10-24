@@ -1,0 +1,6 @@
+name=Assistente NPC
+id=AssistenteNPC
+description=Um sobrevivente assistente que te segue e obedece comandos: lootear corpos, cortar madeira, vigiar um local, analisar areas e ajudar em combate. Abra o menu radial com a tecla G (configuravel em Opcoes > Mods). Requer o mod Bandits (Bandits2).
+author=iago
+versionMin=42.20
+require=\Bandits2
