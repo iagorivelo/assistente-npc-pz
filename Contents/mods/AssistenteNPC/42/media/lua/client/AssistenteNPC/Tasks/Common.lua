@@ -1,7 +1,7 @@
 -- AssistenteNPC - estado de ordens compartilhado pelas tarefas.
 --
--- O estado do assistente fica em brain.assistente (salvo junto com o brain
--- pelo Bandits):
+-- As tarefas recebem o registro do NPC (Engine/Registry.lua, salvo no
+-- ModData). Campos usados aqui:
 --   role   = "assistant" | "stray"
 --   order  = "follow" | "stay" | "loot" | "wood" | "guard" | "analyze" | "deliver"
 --   params = parametros da ordem (ex.: posicao do posto de vigia)
@@ -17,10 +17,6 @@ function Tasks.setOrder(st, order, params)
     st.order = order
     st.params = params or {}
     st.state = {}
-    -- Espelho no ModData global, para decisoes enquanto o NPC esta descarregado.
-    if AssistenteNPC.Brain then
-        AssistenteNPC.Brain.getData().order = order
-    end
 end
 
 --- Registra mais uma tentativa de andar ate um alvo, a distancia `dist`.

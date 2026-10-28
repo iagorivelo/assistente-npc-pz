@@ -77,17 +77,10 @@ end
 -- Zumbis
 -- ---------------------------------------------------------------------------
 
---- Inimigo vivo: zumbi comum ou bandido hostil (NPCs do Bandits tambem sao IsoZombie).
+--- Inimigo vivo: qualquer zumbi que nao seja um NPC deste mod.
 function Util.isLiveZombie(obj)
     if obj == nil or not instanceof(obj, "IsoZombie") or obj:isDead() then return false end
-    if obj:getVariableBoolean("Bandit") then
-        local brain = obj:getModData().brain
-        -- O proprio assistente nunca e inimigo (mesmo no instante em que o
-        -- Bandits o marca como hostil por fogo amigo, antes de corrigirmos).
-        if brain and brain.assistente then return false end
-        return Bandit ~= nil and Bandit.IsHostile(obj) == true
-    end
-    return true
+    return obj:getModData().anpcRid == nil
 end
 
 --- Lista de zumbis vivos dentro de um raio de (x, y).
@@ -183,18 +176,6 @@ function Util.findAxe(inventory)
     return nil
 end
 
--- Cache "fullType -> e machado?" para armas do brain do Bandits (que sao so nomes).
-local axeTypeCache = {}
-
-function Util.isAxeType(fullType)
-    if not fullType then return false end
-    if axeTypeCache[fullType] == nil then
-        local ok, item = pcall(instanceItem, fullType)
-        axeTypeCache[fullType] = ok and item ~= nil and Util.isAxe(item) or false
-    end
-    return axeTypeCache[fullType]
-end
-
 -- ---------------------------------------------------------------------------
 -- Inventario
 -- ---------------------------------------------------------------------------
@@ -231,6 +212,12 @@ function Util.serializeInventory(inventory)
         if instanceof(item, "Food") then
             pcall(function() record.a = item:getAge() end)
         end
+        if instanceof(item, "DrainableComboItem") then
+            -- B42 usa "uses"; versoes antigas usavam "used delta".
+            if not pcall(function() record.u = item:getCurrentUsesFloat() end) then
+                pcall(function() record.d = item:getUsedDelta() end)
+            end
+        end
         table.insert(list, record)
     end
     return list
@@ -246,27 +233,13 @@ function Util.restoreInventory(inventory, list)
             if type(record) == "table" then
                 if record.c then pcall(function() item:setCondition(record.c) end) end
                 if record.a then pcall(function() item:setAge(record.a) end) end
+                if record.u then pcall(function() item:setCurrentUsesFloat(record.u) end) end
+                if record.d then pcall(function() item:setUsedDelta(record.d) end) end
             end
             inventory:AddItem(item)
         end
     end
     inventory:setDrawDirty(true)
-end
-
---- Itens que o assistente entrega ao jogador (tudo menos o machado, que ele usa).
-function Util.deliverableItems(inventory)
-    local result = {}
-    local keptAxe = false
-    local items = inventory:getItems()
-    for i = 0, items:size() - 1 do
-        local item = items:get(i)
-        if not keptAxe and Util.isAxe(item) then
-            keptAxe = true
-        else
-            table.insert(result, item)
-        end
-    end
-    return result
 end
 
 -- ---------------------------------------------------------------------------

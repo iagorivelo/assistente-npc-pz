@@ -13,8 +13,8 @@ local Util = AssistenteNPC.Util
 local Bridge = AssistenteNPC.Bridge
 local Combat = AssistenteNPC.Combat
 
-local function walkTypeFor(bandit, player, dist)
-    if bandit:getHealth() < 0.4 then return "Limp" end
+local function walkTypeFor(bandit, st, player, dist)
+    if (st.hp or Config.maxHp) < Config.hurtWarningHp then return "Limp" end
     if player:isSprinting() or player:isRunning() or dist > Config.followRunDist then return "Run" end
     if player:isSneaking() then return "SneakWalk" end
     return "Walk"
@@ -33,7 +33,7 @@ function Tasks.follow(bandit, st, player)
 
     local dist = Util.distObj(bandit, player)
     if dist > Config.followMaxDist or math.abs(bandit:getZ() - player:getZ()) >= 1 then
-        return { Bridge.moveToPlayerTask(bandit, player, walkTypeFor(bandit, player, dist)) }
+        return { Bridge.moveToPlayerTask(bandit, player, walkTypeFor(bandit, st, player, dist)) }
     end
 
     return Bridge.idleTasks(bandit)

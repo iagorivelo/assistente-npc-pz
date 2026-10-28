@@ -1,5 +1,5 @@
 -- AssistenteNPC - escolha de alvo em combate.
--- O golpe em si e automatico (ManageCombat do Bandits ataca quem estiver ao
+-- O golpe em si e automatico (Engine/Fight.lua ataca quem estiver ao
 -- alcance). Aqui decidimos PARA ONDE o assistente vai quando ha perigo.
 
 require "AssistenteNPC/Config"

@@ -4,17 +4,18 @@
 --  1) o assistente morre (Brain.lua grava data.deadAtHours);
 --  2) depois de Config.recruitCooldownHours horas de jogo, escolhemos um ponto
 --     aleatorio longe do jogador e avisamos a direcao ("ao norte...");
---  3) quando aquela area carrega (jogador chegou perto), pedimos ao Bandits
---     um sobrevivente "perdido" ali (brain.key = keyStray);
+--  3) quando aquela area carrega (jogador chegou perto), criamos ali um
+--     sobrevivente "perdido" (registro com role = "stray");
 --  4) ele fica parado pedindo socorro; perto dele, o menu radial mostra
 --     "Recrutar sobrevivente" e ele vira o novo assistente.
 --
--- data.stray = { x, y, z, id, requestedAt, hintedAt }
+-- data.stray = { x, y, z, rid, hintedAt, lostSince }
 
 require "AssistenteNPC/Config"
 require "AssistenteNPC/Util"
 require "AssistenteNPC/Bridge"
 require "AssistenteNPC/Tasks/Common"
+require "AssistenteNPC/Engine/Registry"
 
 AssistenteNPC.Recruit = {}
 local Recruit = AssistenteNPC.Recruit
@@ -22,6 +23,7 @@ local Config = AssistenteNPC.Config
 local Util = AssistenteNPC.Util
 local Bridge = AssistenteNPC.Bridge
 local Tasks = AssistenteNPC.Tasks
+local Registry = AssistenteNPC.Registry
 
 local HINT_INTERVAL_HOURS = 3
 local hintedThisSession = false
@@ -42,10 +44,16 @@ local function chooseLocation(player)
     }
 end
 
+local function isWater(sq)
+    -- B42.20+: IsoGridSquare:has(IsoFlagType); versoes antigas usavam Is().
+    local ok, water = pcall(function() return sq:has(IsoFlagType.water) end)
+    if ok then return water == true end
+    ok, water = pcall(function() return sq:Is(IsoFlagType.water) end)
+    return ok and water == true
+end
+
 local function isGoodSquare(sq)
-    if not sq:isFree(false) then return false end
-    if BanditUtils and BanditUtils.IsWater and BanditUtils.IsWater(sq) then return false end
-    return true
+    return sq:isFree(false) and not isWater(sq)
 end
 
 local function findSpawnSquare(stray)
@@ -59,9 +67,37 @@ local function findSpawnSquare(stray)
     return best
 end
 
+--- Cria (ou recria) o corpo do sobrevivente no local pendente.
+local function spawnStray(player, data)
+    local stray = data.stray
+    -- So da para criar o NPC quando a area estiver carregada.
+    if not Util.getSquare(stray.x, stray.y, stray.z) then return end
+
+    local square = findSpawnSquare(stray)
+    if not square then
+        -- Lugar ruim (agua, parede...): sorteia outro e avisa de novo.
+        local old = stray.rid
+        data.stray = chooseLocation(player)
+        data.stray.rid = old
+        hint(player, data.stray)
+        return
+    end
+
+    local record = Registry.get(stray.rid)
+    local fresh = false
+    if not record then
+        record = Registry.create("stray")
+        stray.rid = record.rid
+        fresh = true
+    else
+        Registry.retireOutfit(record)
+    end
+    AssistenteNPC.Brain.spawnRecord(record, square:getX(), square:getY(), square:getZ(), fresh)
+end
+
 --- Chamado pelo Brain a cada varredura (~1s).
 function Recruit.update(player, data)
-    if data.assistantId or data.pendingSpawn or not data.deadAtHours then return end
+    if data.assistantRid or not data.deadAtHours then return end
 
     local hours = getGameTime():getWorldAgeHours()
 
@@ -75,19 +111,8 @@ function Recruit.update(player, data)
     end
 
     local stray = data.stray
-    if stray.id then
-        -- Ja existe no mundo. Se o jogador esta perto do local e mesmo assim
-        -- nao o encontramos por um tempo, ele se perdeu: cria outro ali.
-        if AssistenteNPC.Brain.getStray() then
-            stray.lostSince = nil
-        elseif Util.dist(player:getX(), player:getY(), stray.x, stray.y) < 40 then
-            stray.lostSince = stray.lostSince or Util.now()
-            if Util.now() - stray.lostSince > Config.strayLostMs then
-                stray.id = nil
-                stray.requestedAt = nil
-                stray.lostSince = nil
-            end
-        end
+    if AssistenteNPC.Brain.getStray() then
+        stray.lostSince = nil
         return
     end
 
@@ -96,21 +121,22 @@ function Recruit.update(player, data)
         hint(player, stray)
     end
 
-    if stray.requestedAt and Util.now() - stray.requestedAt < Config.spawnTimeoutMs then return end
-
-    -- So da para criar o NPC quando a area estiver carregada.
-    if not Util.getSquare(stray.x, stray.y, stray.z) then return end
-
-    local square = findSpawnSquare(stray)
-    if not square then
-        -- Lugar ruim (agua, parede...): sorteia outro e avisa de novo.
-        data.stray = chooseLocation(player)
-        hint(player, data.stray)
+    if not stray.rid then
+        spawnStray(player, data)
         return
     end
 
-    stray.requestedAt = Util.now()
-    Bridge.spawn(player, square:getX(), square:getY(), square:getZ(), Config.keyStray)
+    -- Ja foi criado. Se o jogador esta perto do local e mesmo assim nao o
+    -- encontramos por um tempo, o corpo se perdeu: cria de novo ali.
+    if Util.dist(player:getX(), player:getY(), stray.x, stray.y) < 40 then
+        stray.lostSince = stray.lostSince or Util.now()
+        if Util.now() - stray.lostSince > Config.strayLostMs then
+            stray.lostSince = nil
+            spawnStray(player, data)
+        end
+    else
+        stray.lostSince = nil
+    end
 end
 
 --- Sobrevivente recrutavel ao alcance do jogador (ou nil).
@@ -125,22 +151,17 @@ end
 function Recruit.recruit(player)
     local stray = Recruit.findStrayNear(player)
     if not stray then return end
-    local brain = Bridge.getBrain(stray)
-    local st = brain and brain.assistente
-    if not st then return end
+    local record = AssistenteNPC.Brain.recordOf(stray)
+    if not record then return end
 
     local data = AssistenteNPC.Brain.getData()
-    st.role = "assistant"
-    Tasks.setOrder(st, "follow")
-    Bridge.forceStationary(stray, false)
+    record.role = "assistant"
+    Tasks.setOrder(record, "follow")
     Bridge.clearTasks(stray)
 
-    data.assistantId = brain.id
-    data.cid = brain.cid
-    data.name = brain.fullname
+    data.assistantRid = record.rid
     data.stray = nil
     data.deadAtHours = nil
-    data.missingSince = nil
 
     Bridge.say(stray, Util.text("IGUI_AssistenteNPC_SayRecruited"))
 end

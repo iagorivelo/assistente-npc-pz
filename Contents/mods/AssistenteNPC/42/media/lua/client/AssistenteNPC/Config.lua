@@ -1,39 +1,44 @@
 -- AssistenteNPC - configuracao central
 -- Todos os valores de balanceamento ficam aqui para facilitar ajustes.
--- Tempos de tarefa ("time") seguem a unidade do Bandits: ~60 unidades = 1 segundo.
+-- Tempos de tarefa ("time") usam ~60 unidades = 1 segundo.
 
 AssistenteNPC = AssistenteNPC or {}
 
 AssistenteNPC.Config = {
-    -- Integracao com o Bandits
-    programName = "AssistenteNPC",       -- nome do ZombieProgram registrado
-    keyAssistant = "AssistenteNPC",      -- brain.key do assistente
-    keyStray = "AssistenteNPC_Stray",    -- brain.key do sobrevivente recrutavel
-    -- Clas definidos em common/bandits/clans.txt. Cada cla tem um unico modelo
-    -- de NPC (common/bandits/bandits.txt), entao o cla define o visual.
-    -- Clas com spawnChance = 0 nunca aparecem sozinhos pelo mapa.
-    clans = {
-        "5fc15d3b-9667-4e48-925c-24027145eeff", -- Lenhador
-        "96f949b5-09c2-4f34-a043-0627d4b1110c", -- Exploradora
-        "1028ff56-3d9d-43be-8982-b5df85c28aa6", -- Andarilho
-    },
-
     -- Gerenciador (Brain)
-    scanIntervalMs = 1000,       -- frequencia da busca pelo NPC na lista de zumbis
+    scanIntervalMs = 1000,       -- frequencia do laco de gerenciamento
     startDelayMs = 3000,         -- espera apos carregar o jogo antes de criar o assistente
-    spawnTimeoutMs = 10000,      -- se o NPC pedido nao aparecer nesse tempo, pede de novo
     relocateAfterMs = 15000,     -- sumido (ex.: voce foi de carro) por esse tempo => reaparece perto de voce
-    spawnRetryMs = 60000,        -- se o Bandits nao criar o assistente, tenta de novo depois disso
+
+    -- Corpo
+    walkSpeed = 1.0,             -- multiplicador da animacao de andar
+    runSpeed = 0.75,             -- multiplicador da animacao de correr
+    starterItems = { "Base.BaseballBat" },
+
+    -- Vida (o corpo e invulneravel para o jogo; a vida e controlada pelo mod)
+    maxHp = 100,
+    hpRegenPerMinute = 1,        -- por minuto de jogo, sem inimigos por perto
+    hurtWarningHp = 35,          -- abaixo disso ele avisa que esta ferido
 
     -- Seguir
     followMaxDist = 3.0,         -- acima disso ele anda ate voce
     followRunDist = 10.0,        -- acima disso ele corre
 
-    -- Combate
+    -- Combate do assistente
     assistRadius = 8,            -- raio (em volta de voce) em que ele te defende
     assistMemoryMs = 8000,       -- quanto tempo ele lembra do zumbi que voce atacou
     assistMaxChase = 15,         -- distancia maxima que ele persegue o zumbi que voce atacou
     selfDefenseRadius = 5,       -- durante tarefas, reage a zumbis a essa distancia dele
+    attackCooldownMs = 900,      -- intervalo minimo entre golpes
+    damageMultiplier = 2.0,      -- multiplica o dano maximo da arma contra zumbis
+    reachBonus = 0.3,            -- somado ao alcance da arma
+
+    -- Zumbis contra o assistente
+    zombieAggroRadius = 10,      -- zumbis a essa distancia (e mais perto dele que de voce) vao atras dele
+    zombieBiteRange = 0.9,
+    zombieBiteDamage = 8,        -- vida perdida por mordida
+    zombieBiteCooldownMs = 1600, -- por zumbi
+    zombieSwarmBonus = 6,        -- dano extra por mordida quando 3+ zumbis o cercam
 
     -- Lootear corpos
     lootRadius = 15,             -- raio de busca por corpos (a partir de onde voce deu a ordem)
@@ -66,7 +71,7 @@ AssistenteNPC.Config = {
     strayHelpCooldownMs = 12000,
     strayLostMs = 30000,         -- perto do local e sem achar o sobrevivente por esse tempo => recria
 
-    debug = false,
+    debug = true,                -- TESTES: mostra ordem/tarefa/vida sobre a cabeca e registra eventos no console.txt
 }
 
 return AssistenteNPC.Config

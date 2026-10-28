@@ -16,7 +16,7 @@ local Bridge = AssistenteNPC.Bridge
 local Combat = AssistenteNPC.Combat
 
 function Tasks.deliver(bandit, st, player)
-    if #Util.deliverableItems(bandit:getInventory()) == 0 then
+    if #AssistenteNPC.Brain.deliverableItems(bandit) == 0 then
         Bridge.say(bandit, Util.text("IGUI_AssistenteNPC_SayNothingToDeliver"))
         Tasks.setOrder(st, "follow")
         return { Bridge.waitTask("Shrug", 60) }
