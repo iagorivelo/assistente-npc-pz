@@ -3,7 +3,7 @@
 Um sobrevivente assistente que te segue, obedece comandos por um menu radial e te
 ajuda a lutar contra zumbis. **Não depende de nenhum outro mod.**
 
-> Versão em teste (branch `standalone`). O modo de depuração está **ligado**:
+> Versão em teste. O modo de depuração está **ligado**:
 > o assistente mostra ordem, tarefa e vida acima da cabeça. Desligue em
 > `Config.lua` (`debug = false`) quando não precisar mais.
 
