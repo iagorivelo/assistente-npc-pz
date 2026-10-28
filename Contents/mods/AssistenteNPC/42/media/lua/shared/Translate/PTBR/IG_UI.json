@@ -53,5 +53,5 @@
     "IGUI_AssistenteNPC_SayRecruited": "Obrigado! Vou com você.",
     "IGUI_AssistenteNPC_SayHello": "Vamos nessa. Estou com você.",
     "IGUI_AssistenteNPC_TooFar": "Seu assistente está longe demais para ouvir.",
-    "IGUI_AssistenteNPC_MissingBandits": "Assistente NPC: o mod Bandits (Bandits2) não está ativo!"
+    "IGUI_AssistenteNPC_SayHurt": "Estou ferido, preciso de um tempo!"
 }
