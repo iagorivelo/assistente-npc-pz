@@ -24,7 +24,7 @@ Aperte **G** para abrir o menu radial (a tecla pode ser trocada em
 
 | Comando | O que ele faz |
 |---|---|
-| **Seguir-me** | Segue você e imita seu passo (corre quando você corre, agacha quando você agacha). |
+| **Seguir-me** | É o padrão: sem outra ordem, ele segue você e imita seu passo (corre quando você corre, agacha quando você agacha). |
 | **Esperar aqui** | Fica parado onde você está. Só luta se algo chegar muito perto. |
 | **Lootear corpos** | Revista os corpos num raio de 15 tiles e pega **só itens úteis**: armas, comida boa, remédios, munição, ferramentas e chaves. No fim, traz tudo para você. |
 | **Pegar madeira** | Derruba até 3 árvores perto de onde você está e empilha as toras ali. Sem machado, a opção aparece como *"Pegar madeira (necessita de um machado para concluir)"*. |
@@ -46,6 +46,12 @@ por perto.
 Depois de **24 horas de jogo** você recebe a dica *"Você ouve alguém gritando por
 ajuda, ao norte..."*. Encontre o sobrevivente e use **Recrutar sobrevivente**
 no menu radial (a até 3 tiles dele): ele vira seu novo assistente.
+
+**Portas, janelas e cercas:** no caminho, ele abre portas e janelas e pula
+janelas e cercas baixas. Portas e janelas trancadas ou com barricada ele não
+abre. Se ficar travado e longe de você (mais de 4 tiles), ele reaparece ao seu
+lado: depois de 3 segundos se você não o estiver vendo, ou de 8 segundos se
+estiver.
 
 **Se você for longe de carro**, o assistente reaparece perto de você uns 15
 segundos depois que você sair do carro, com o mesmo nome, visual e itens. Isso
@@ -119,6 +125,7 @@ mostra `[papel] ordem | tarefa | hp | estado`.
 ## Limitações conhecidas
 
 - Só single-player.
+- Ao pular janelas e cercas ele usa a animação dos zumbis (às vezes cai do outro lado e levanta).
 - Golpes seus nele não causam dano, mas podem fazê-lo cambalear com animação de zumbi.
 - A presença dele pode contar como "zumbi por perto" para a música e o pânico do personagem.
 - Itens recriados (ao recarregar ou recriar o assistente) mantêm tipo, condição

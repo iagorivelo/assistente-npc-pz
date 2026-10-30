@@ -39,6 +39,16 @@ local function strayTasks(npc, record, player)
     return Bridge.idleTasks(npc)
 end
 
+--- Enquanto ele esta a toa (tarefa "idle"): ha motivo para parar e
+--- reavaliar agora? Na ordem "Seguir-me", sim, se voce se afastou.
+function Program.shouldStopIdling(npc, record)
+    if record.role ~= "assistant" or record.order ~= "follow" then return false end
+    local player = getSpecificPlayer(0)
+    if not player or player:isDead() then return false end
+    return Util.distObj(npc, player) > Config.followMaxDist
+        or math.abs(npc:getZ() - player:getZ()) >= 1
+end
+
 function Program.think(npc, record)
     local player = getSpecificPlayer(0)
     if not player or player:isDead() then

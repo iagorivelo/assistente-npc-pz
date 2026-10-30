@@ -13,6 +13,7 @@ require "AssistenteNPC/Config"
 require "AssistenteNPC/Util"
 require "AssistenteNPC/Engine/Body"
 require "AssistenteNPC/Engine/Executor"
+require "AssistenteNPC/Engine/Obstacles"
 
 AssistenteNPC.Fight = {}
 local Fight = AssistenteNPC.Fight
@@ -178,6 +179,7 @@ end
 
 local function meleeUpdate(npc, md, now)
     if Executor.isBusyWith(npc, "Smack") then return end
+    if AssistenteNPC.Obstacles.isClimbing(npc) then return end
     if md.anpcNextAttack and now < md.anpcNextAttack then return end
     local reach = reachOf(Fight.weaponOf(npc))
     local enemy = Util.nearestZombie(npc:getX(), npc:getY(), npc:getZ(), reach)

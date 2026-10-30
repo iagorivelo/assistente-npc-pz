@@ -141,6 +141,11 @@ local function onZombieUpdate(zombie)
     Fight.update(zombie, record)
     if record.dying then return end
 
+    local current = Executor.current(zombie)
+    if current and current.idle and AssistenteNPC.Program
+        and AssistenteNPC.Program.shouldStopIdling(zombie, record) then
+        Executor.clear(zombie)
+    end
     if not Executor.tick(zombie) then
         think(zombie, record)
     end

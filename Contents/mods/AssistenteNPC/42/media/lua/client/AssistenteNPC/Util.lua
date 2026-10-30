@@ -153,15 +153,26 @@ end
 function Util.isAxe(item)
     if not item or not instanceof(item, "HandWeapon") then return false end
     if item:isBroken() then return false end
-    -- B42.20+: tags sao um enum (ItemTag.CHOP_TREE). Versoes anteriores usavam string.
-    if ItemTag and ItemTag.CHOP_TREE then
-        local ok, hasTag = pcall(function() return item:hasTag(ItemTag.CHOP_TREE) end)
-        if ok and hasTag then return true end
+    -- B42: hasTag so aceita ItemTag. Outro mod pode ter trocado ItemTag por uma
+    -- tabela de strings; nesse caso (ou sem ItemTag) lemos os nomes das tags.
+    -- (Erros dentro de pcall tambem vao para o console.txt, entao evitamos chamadas
+    -- que sabemos que falham.)
+    if ItemTag and type(ItemTag.CHOP_TREE) == "userdata" then
+        if item:hasTag(ItemTag.CHOP_TREE) then return true end
+    else
+        local ok, found = pcall(function()
+            local it = item:getTags():iterator()
+            while it:hasNext() do
+                if string.find(string.lower(tostring(it:next())), "choptree", 1, true) then return true end
+            end
+            return false
+        end)
+        if ok and found then return true end
     end
-    local ok, hasTag = pcall(function() return item:hasTag("ChopTree") end)
-    if ok and hasTag then return true end
-    local okCat, cats = pcall(function() return item:getCategories() end)
-    if okCat and cats and cats:contains("Axe") then return true end
+    if WeaponCategory and type(WeaponCategory.AXE) == "userdata" then
+        local script = item:getScriptItem()
+        if script and script:containsWeaponCategory(WeaponCategory.AXE) then return true end
+    end
     return string.find(string.lower(item:getType()), "axe", 1, true) ~= nil
         and not string.find(string.lower(item:getType()), "pickaxe", 1, true)
 end

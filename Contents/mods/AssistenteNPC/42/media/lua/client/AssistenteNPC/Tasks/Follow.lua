@@ -36,5 +36,12 @@ function Tasks.follow(bandit, st, player)
         return { Bridge.moveToPlayerTask(bandit, player, walkTypeFor(bandit, st, player, dist)) }
     end
 
-    return Bridge.idleTasks(bandit)
+    -- Perto de voce: olha para voce e reavalia logo (pausas curtas, para
+    -- reagir rapido quando voce se afasta). As vezes faz um gesto.
+    if ZombRand(25) == 0 then
+        return Bridge.idleTasks(bandit)
+    end
+    local face = Bridge.faceTask(player:getX(), player:getY())
+    face.time = 20
+    return { face }
 end

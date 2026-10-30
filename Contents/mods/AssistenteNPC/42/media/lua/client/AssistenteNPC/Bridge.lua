@@ -54,11 +54,17 @@ end
 local IDLE_ANIMS = { "ShiftWeight", "WipeBrow" }
 
 --- Ficar a toa: na maioria das vezes so espera; as vezes faz um gesto.
+--- Tarefas "idle" sao interrompidas assim que o programa tem algo melhor a
+--- fazer (Program.shouldStopIdling).
 function Bridge.idleTasks(npc)
+    local task
     if ZombRand(6) == 0 then
-        return { Bridge.waitTask(IDLE_ANIMS[ZombRand(#IDLE_ANIMS) + 1], 200) }
+        task = Bridge.waitTask(IDLE_ANIMS[ZombRand(#IDLE_ANIMS) + 1], 200)
+    else
+        task = Bridge.waitTask(nil, 90)
     end
-    return { Bridge.waitTask(nil, 90) }
+    task.idle = true
+    return { task }
 end
 
 --- Pegar item(ns) do chao.

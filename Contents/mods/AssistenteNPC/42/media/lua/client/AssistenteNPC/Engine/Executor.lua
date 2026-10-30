@@ -14,6 +14,7 @@
 
 require "AssistenteNPC/Util"
 require "AssistenteNPC/Engine/Body"
+require "AssistenteNPC/Engine/Obstacles"
 
 AssistenteNPC.Actions = AssistenteNPC.Actions or {}
 AssistenteNPC.Executor = {}
@@ -137,7 +138,36 @@ end
 -- Acoes basicas
 -- ---------------------------------------------------------------------------
 
+local OBSTACLE_CHECK_MS = 150
+local STUCK_MOVE_DIST = 0.75     -- andar menos que isso ...
+local STUCK_UNSEEN_MS = 3000     -- ... por esse tempo, longe da vista do jogador = travado
+local STUCK_SEEN_MS = 8000       -- ... por esse tempo, mesmo a vista = travado
+local STUCK_MIN_PLAYER_DIST = 4  -- perto do jogador nao precisa reaparecer
+
+--- Acompanha se o NPC esta saindo do lugar. Devolve ha quantos ms ele esta
+--- parado (enquanto tenta andar).
+local function stuckTime(zombie, now)
+    local md = zombie:getModData()
+    local anchor = md.anpcMoveAnchor
+    -- Um Move novo logo depois de outro continua a mesma medicao.
+    if not anchor or now - (md.anpcMoveLastAt or 0) > 1000
+        or Util.dist(zombie:getX(), zombie:getY(), anchor.x, anchor.y) > STUCK_MOVE_DIST then
+        anchor = { x = zombie:getX(), y = zombie:getY(), at = now }
+        md.anpcMoveAnchor = anchor
+    end
+    md.anpcMoveLastAt = now
+    return now - anchor.at
+end
+
+local function isSeenByPlayer(zombie)
+    local square = zombie:getCurrentSquare()
+    if not square then return false end
+    local ok, seen = pcall(function() return square:isCanSee(0) end)
+    return ok and seen == true
+end
+
 --- Andar ate (x, y, z). Com followPlayer = true, o destino acompanha o jogador.
+--- Abre portas e janelas e pula cercas no caminho (Engine/Obstacles.lua).
 Actions.Move = {
     onStart = function(zombie, task)
         Body.setWalkType(zombie, Body.walkTypeFor(task.walkType))
@@ -147,19 +177,54 @@ Actions.Move = {
         return true
     end,
     onWorking = function(zombie, task)
+        local Obstacles = AssistenteNPC.Obstacles
+        local now = Util.now()
+        local player = getSpecificPlayer(0)
         if task.followPlayer then
-            local player = getSpecificPlayer(0)
             if not player then return true end
             if Util.distObj(zombie, player) <= (task.stopDist or 2.0) then return true end
             local moved = Util.dist(player:getX(), player:getY(), task.x, task.y) > 1.5
-            if moved and Util.now() - task.repathAt > 500 then
+            if moved and now - task.repathAt > 500 and not Obstacles.isClimbing(zombie) then
                 task.x, task.y, task.z = player:getX(), player:getY(), player:getZ()
                 zombie:getPathFindBehavior2():pathToLocationF(task.x, task.y, task.z)
-                task.repathAt = Util.now()
+                task.repathAt = now
             end
         elseif Util.dist(zombie:getX(), zombie:getY(), task.x, task.y) <= (task.stopDist or 0.6) then
             return true
         end
+
+        if Obstacles.isClimbing(zombie) then
+            zombie:getModData().anpcMoveLastAt = now
+            return false
+        end
+
+        -- Medido antes dos obstaculos: um caminho bloqueado tambem conta como travado.
+        local stuckMs = stuckTime(zombie, now)
+        if stuckMs > STUCK_UNSEEN_MS then
+            if task.followPlayer and Util.distObj(zombie, player) > STUCK_MIN_PLAYER_DIST
+                and (stuckMs > STUCK_SEEN_MS or not isSeenByPlayer(zombie)) then
+                Obstacles.unstick(zombie, player)
+                zombie:getModData().anpcMoveAnchor = nil
+                return true
+            end
+            if not task.followPlayer and stuckMs > STUCK_SEEN_MS then
+                -- Alvo de tarefa inalcancavel: desiste (a tarefa conta a tentativa).
+                task.blocked = true
+                zombie:getModData().anpcMoveAnchor = nil
+                return true
+            end
+        end
+
+        if not task.obstacleAt or now - task.obstacleAt >= OBSTACLE_CHECK_MS then
+            task.obstacleAt = now
+            local ok, status = pcall(Obstacles.check, zombie)
+            if ok and status == Obstacles.BLOCKED then
+                task.blocked = true
+                return true
+            end
+            if ok and status == Obstacles.BUSY then return false end
+        end
+
         local result = zombie:getPathFindBehavior2():update()
         return result == BehaviorResult.Succeeded or result == BehaviorResult.Failed
     end,
